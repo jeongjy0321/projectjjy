@@ -16,7 +16,7 @@
   body { margin: 0; font: 14px/1.5 system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: var(--bg); color: var(--text); }
   header { background: var(--primary); color: var(--primary-ink); padding: 12px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   header h1 { font-size: 18px; margin: 0 12px 0 0; }
-  main { max-width: 1400px; margin: 0 auto; padding: 16px; }
+  main { margin: 0 auto; padding: 16px 24px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
   .card h2 { font-size: 16px; margin: 0 0 12px; }
   button { font: inherit; border: 1px solid var(--line); background: #fff; color: var(--text); border-radius: 6px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
@@ -29,7 +29,7 @@
   header button:hover, header button.active { background: rgba(255,255,255,.3); }
   input, select, textarea { font: inherit; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; background: #fff; color: var(--text); }
   input:disabled, select:disabled, textarea:disabled { background: #f7f8fa; color: var(--text); }
-  textarea { resize: vertical; min-height: 38px; }
+  textarea { resize: vertical; min-height: 38px; overflow: hidden; }
   label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
   .inline { display: flex; gap: 6px; }
@@ -59,14 +59,15 @@
   .status-bar.done { border-color: #a9c6f2; background: #f2f7ff; }
 
   .table-wrap { overflow-x: auto; }
-  table.ra { border-collapse: collapse; width: 100%; min-width: 1500px; }
-  table.ra.lib { min-width: 1200px; }
+  table.ra { border-collapse: collapse; width: 100%; min-width: 1900px; }
+  table.ra.lib { min-width: 1600px; }
   table.ra th, table.ra td { border: 1px solid var(--line); padding: 4px; vertical-align: top; }
   table.ra th { background: #eef1f6; font-size: 12px; font-weight: 600; text-align: center; padding: 6px 4px; }
   table.ra td.num { text-align: center; vertical-align: middle; }
-  table.ra select { padding: 4px; }
-  table.ra textarea { min-height: 52px; }
-  .col-no { width: 36px; } .col-sm { width: 70px; } .col-md { width: 120px; } .col-lg { width: 200px; }
+  table.ra select { padding: 4px 2px; font-size: 13px; }
+  table.ra input[type="date"] { padding: 4px 2px; font-size: 13px; }
+  table.ra textarea { min-height: 52px; word-break: keep-all; overflow-wrap: anywhere; }
+  .col-no { width: 40px; } .col-sm { width: 84px; } .col-md { width: 140px; } .col-date { width: 136px; } .col-lg { width: 260px; }
   .locked .edit-only { display: none !important; }
 
   .summary { display: grid; grid-template-columns: minmax(280px, 420px) 1fr; gap: 16px; }
@@ -202,8 +203,8 @@
               <th colspan="4">현재 위험성</th>
               <th rowspan="2" class="col-lg">감소대책</th>
               <th colspan="3">개선 후 위험성</th>
-              <th rowspan="2" class="col-md">개선 예정일</th>
-              <th rowspan="2" class="col-md">완료일</th>
+              <th rowspan="2" class="col-date">개선 예정일</th>
+              <th rowspan="2" class="col-date">완료일</th>
               <th rowspan="2" class="col-md">담당자</th>
               <th rowspan="2" class="col-no edit-only"></th>
             </tr>
@@ -464,7 +465,22 @@ function show(view) {
   if (view === 'list') renderList();
   if (view === 'library') renderLibrary();
   window.scrollTo(0, 0);
+  autosizeIn(document.getElementById('view-' + view));
 }
+
+// 입력칸 높이를 내용에 맞춰 늘려 글자가 잘리지 않게 함 (화면에 보일 때만 높이 계산 가능)
+function autosize(el) {
+  if (!el.offsetParent) return;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 2 + 'px';
+}
+function autosizeIn(root) { root.querySelectorAll('textarea').forEach(autosize); }
+document.addEventListener('input', e => { if (e.target.tagName === 'TEXTAREA') autosize(e.target); });
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => autosizeIn(document.querySelector('main')), 150);
+});
 document.querySelectorAll('[data-nav]').forEach(b => { b.onclick = () => show(b.dataset.nav); });
 
 // ---------- 목록 ----------
@@ -701,6 +717,7 @@ function renderRows() {
   renderStatus();
   applyLock();
   renderSummary();
+  autosizeIn(document.getElementById('rows'));
 }
 
 function renderSummary() {
@@ -879,6 +896,7 @@ function renderLibrary() {
           <td class="num"><button class="danger" data-del="${it.id}" title="항목 삭제">✕</button></td></tr>`).join('')}</tbody>
       </table>
     </div>`;
+  autosizeIn(detail);
 }
 
 document.getElementById('lib-procs').onclick = e => {
