@@ -174,6 +174,19 @@
   </div>
 </dialog>
 
+<dialog id="pw-dlg">
+  <h2>비밀번호 확인</h2>
+  <p class="muted small">AI 분석은 비용이 드는 기능이라 비밀번호를 입력해야 사용할 수 있습니다.</p>
+  <form id="pw-form">
+    <input id="pw-input" type="password" inputmode="numeric" autocomplete="off" placeholder="비밀번호">
+    <p class="warn" id="pw-error"></p>
+    <div class="dlg-actions">
+      <button type="button" onclick="this.closest('dialog').close()">취소</button>
+      <button type="submit" class="primary">확인</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="estimate-dlg">
   <h2>AI 정밀 분석 실행</h2>
   <div id="estimate-body"></div>
@@ -208,6 +221,9 @@ const PRICES = { 'claude-opus-5-5': { in: 4, out: 20 }, 'claude-sonnet-5-5': { i
 const KRW_PER_USD = 1400;  // 대략적인 환율
 const EST_OUTPUT_TOKENS = 20000;  // 판단 과정 + 결과 JSON 예상치
 const KEY_STORE = 'anthropic-api-key', MODEL_STORE = 'anthropic-model';
+// AI 기능 비밀번호의 SHA-256 해시 ('risk-ai-gate:' + 비밀번호). 비밀번호를 바꾸려면 이 값을 다시 계산해 넣는다.
+const AI_PW_HASH = '5af7f4b93f1f3c6fa795116f85d81fde1883bf8811920933fb393cddf6fdd4eb';
+const AI_UNLOCK = 'ai-unlocked';
 
 // ---------- 유틸 ----------
 const $ = s => document.querySelector(s);
@@ -587,8 +603,35 @@ function explainError(err) {
   return err.message || String(err);
 }
 
+// 비밀번호를 한 번 맞히면 이 탭을 닫을 때까지 다시 묻지 않음
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function isUnlocked() { try { return sessionStorage.getItem(AI_UNLOCK) === AI_PW_HASH; } catch { return false; } }
+function requirePassword() {
+  if (isUnlocked()) return Promise.resolve(true);
+  const dlg = $('#pw-dlg');
+  $('#pw-input').value = ''; $('#pw-error').textContent = '';
+  dlg.showModal(); $('#pw-input').focus();
+  return new Promise(resolve => {
+    $('#pw-form').onsubmit = async e => {
+      e.preventDefault();
+      if (await sha256('risk-ai-gate:' + $('#pw-input').value.trim()) !== AI_PW_HASH) {
+        $('#pw-error').textContent = '비밀번호가 맞지 않습니다.';
+        $('#pw-input').select();
+        return;
+      }
+      try { sessionStorage.setItem(AI_UNLOCK, AI_PW_HASH); } catch { /* 저장 불가 시 매번 확인 */ }
+      dlg.onclose = null; dlg.close(); resolve(true);
+    };
+    dlg.onclose = () => resolve(false);
+  });
+}
+
 let prepared = null;
 $('#btn-ai').onclick = async () => {
+  if (!await requirePassword()) return;
   const cl = client();
   if (!cl) { toast('먼저 AI 설정에서 API 키를 입력하세요.'); $('#settings-dlg').showModal(); return; }
   if (!files.length) { toast('먼저 서류를 올려주세요.'); return; }
@@ -808,7 +851,8 @@ $('#btn-csv').onclick = () => {
 };
 
 // ---------- 설정·기준 ----------
-$('#btn-settings').onclick = () => {
+$('#btn-settings').onclick = async () => {
+  if (!await requirePassword()) return;
   $('#api-key').value = getSetting(KEY_STORE);
   $('#model').value = model();
   $('#settings-dlg').showModal();
