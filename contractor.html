@@ -4,112 +4,71 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>협력사 서류 평가</title>
+<link rel="stylesheet" href="app.css">
 <style>
-  :root {
-    --bg: #f5f6f8; --card: #fff; --text: #1d2330; --muted: #6b7280; --line: #e2e5ea;
-    --primary: #1f5fbf; --primary-ink: #fff; --danger: #b42318;
-    --ok: #d9f2e0; --ok-ink: #17643a;
-    --mid: #ffe2b8; --mid-ink: #8a4b00;
-    --bad: #ffc9c9; --bad-ink: #9b1111;
-    --na: #eceff3; --na-ink: #475467;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; font: 14px/1.5 system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: var(--bg); color: var(--text); }
-  .topnav { background: #173a6e; display: flex; align-items: stretch; gap: 4px; padding: 0 16px; flex-wrap: wrap; }
-  .topnav .brand { color: #fff; font-weight: 700; font-size: 16px; padding: 12px 12px 12px 0; }
-  .topnav a { color: rgba(255,255,255,.75); text-decoration: none; padding: 12px 18px; font-size: 15px; font-weight: 600; border-bottom: 3px solid transparent; }
-  .topnav a:hover { color: #fff; background: rgba(255,255,255,.08); }
-  .topnav a.active { color: #fff; border-bottom-color: #fff; }
-  .topnav header { flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0 8px 16px; margin-left: 8px; border-left: 1px solid rgba(255,255,255,.2); }
-  header button { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25); }
-  header button:hover { background: rgba(255,255,255,.22); }
-  header button.active { background: #fff; border-color: #fff; color: #173a6e; font-weight: 600; }
-  main { margin: 0 auto; padding: 16px 24px; max-width: 1600px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
-  .card h2 { font-size: 16px; margin: 0 0 12px; }
-  button { font: inherit; border: 1px solid var(--line); background: #fff; color: var(--text); border-radius: 6px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
-  button:hover { background: #f0f2f5; }
-  button:disabled { opacity: .5; cursor: not-allowed; }
-  button.primary { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
-  button.primary:hover { filter: brightness(1.1); }
-  button.danger { color: var(--danger); }
-  input, select, textarea { font: inherit; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; background: #fff; color: var(--text); }
-  input[type="checkbox"] { width: auto; }
-  textarea { resize: vertical; min-height: 60px; }
-  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-  .toolbar input, .toolbar select { width: auto; }
-  .spacer { flex: 1; }
-  .muted { color: var(--muted); }
-  .small { font-size: 12px; }
-  .warn { color: var(--danger); font-weight: 600; }
+  /* 협력사 서류평가 화면 전용 */
+  textarea { min-height: 60px; }
+  .warn { font-size: inherit; }
   .checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }
   .checks label { display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 14px; margin: 0; }
+  .list-item { cursor: pointer; }
 
-  .list-item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; flex-wrap: wrap; cursor: pointer; }
-  .list-item:hover { background: #fafbfc; }
-  .list-item .info { flex: 1; min-width: 220px; }
-  .list-item .title { font-weight: 600; }
+  .drop { border: 2px dashed #34496b; border-radius: 10px; padding: 24px; text-align: center; color: var(--muted); cursor: pointer; background: var(--input-bg); }
+  .drop:hover { border-color: #4a6591; }
+  .drop.over { background: var(--info); border-color: var(--accent); color: var(--text); }
 
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .s-ok { background: var(--ok); color: var(--ok-ink); }
-  .s-mid { background: var(--mid); color: var(--mid-ink); }
-  .s-bad { background: var(--bad); color: var(--bad-ink); }
-  .s-na { background: var(--na); color: var(--na-ink); }
-  .s-info { background: #dbe8fb; color: #1f4f99; }
-
-  .drop { border: 2px dashed #b8c4d6; border-radius: 10px; padding: 24px; text-align: center; color: var(--muted); cursor: pointer; }
-  .drop.over { background: #eef4ff; border-color: var(--primary); }
-
-  .table-wrap { overflow-x: auto; }
   table.t { border-collapse: collapse; width: 100%; }
   table.t th, table.t td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
-  table.t th { background: #eef1f6; font-size: 12px; white-space: nowrap; }
+  table.t th { background: var(--card-2); font-size: 12px; white-space: nowrap; color: #c8d4e6; }
   table.t td.c { text-align: center; }
-  table.t tr.cat td { background: #f7f8fa; font-weight: 600; }
+  table.t tr.cat td { background: #142036; font-weight: 600; color: #eef3fa; }
   table.t select { width: auto; padding: 3px 4px; }
   .evidence { font-size: 13px; }
   .basis { font-size: 12px; color: var(--muted); }
 
   .score { display: flex; gap: 24px; flex-wrap: wrap; align-items: center; }
-  .score .big { font-size: 44px; font-weight: 800; line-height: 1; }
+  .score .big { font-size: 44px; font-weight: 800; line-height: 1; color: #fff; }
   .grade { font-size: 22px; font-weight: 700; padding: 6px 14px; border-radius: 10px; }
   .bars { flex: 1; min-width: 260px; display: grid; gap: 6px; }
   .bar { display: grid; grid-template-columns: 150px 1fr 48px; gap: 8px; align-items: center; font-size: 13px; }
-  .bar .track { background: #eef1f6; border-radius: 4px; height: 12px; overflow: hidden; }
-  .bar .fill { height: 100%; background: var(--primary); }
-  .progress { padding: 12px; border-radius: 8px; background: #f2f7ff; border: 1px solid #a9c6f2; }
+  .bar .track { background: var(--input-bg); border: 1px solid var(--line); border-radius: 4px; height: 12px; overflow: hidden; }
+  .bar .fill { height: 100%; background: linear-gradient(90deg, #2f7de1, #38bdf8); }
+  .progress { padding: 12px; border-radius: 8px; background: var(--info); border: 1px solid rgba(56, 189, 248, .4); color: var(--info-ink); }
   ul.req li { margin-bottom: 6px; }
 
-  dialog { border: none; border-radius: 10px; max-width: 640px; width: calc(100% - 32px); padding: 20px; }
-  dialog::backdrop { background: rgba(0,0,0,.35); }
-  dialog h2 { margin-top: 0; font-size: 18px; }
-  .dlg-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
-  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #1d2330; color: #fff; padding: 10px 16px; border-radius: 8px; z-index: 10; max-width: calc(100% - 32px); }
-  .locked .edit-only { display: none !important; }
-
   @media print {
-    .topnav, header, .toolbar, .no-print, .edit-only, #toast { display: none !important; }
-    body { background: #fff; }
-    main { padding: 0; max-width: none; }
-    .card { border: none; padding: 0; }
+    .score .big, table.t th, table.t tr.cat td { color: #111; }
+    table.t tr.cat td { background: #f1f3f6; }
     select { appearance: none; border: none; }
   }
 </style>
 </head>
 <body>
-<nav class="topnav">
-  <span class="brand">🦺 안전보건</span>
-  <a href="index.html">위험성평가</a>
-  <a href="contractor.html" class="active">협력사 서류평가</a>
-<header>
-  <button id="btn-home">평가 목록</button>
-  <span class="spacer"></span>
-  <button id="btn-criteria">평가 기준</button>
-  <button id="btn-settings">AI 설정</button>
-</header>
-</nav>
+<div class="layout">
+<aside class="sidebar">
+  <div class="brand">🦺 안전보건</div>
+  <div class="nav-group">
+    <a class="nav-top" href="index.html">위험성평가</a>
+    <div class="nav-sub">
+      <a href="index.html">평가 목록</a>
+      <a href="index.html#library">참조 라이브러리</a>
+      <a href="index.html#guide">평가 기준</a>
+    </div>
+  </div>
+  <div class="nav-group current">
+    <a class="nav-top" href="contractor.html">협력사 서류평가</a>
+    <div class="nav-sub">
+      <button id="btn-home">평가 목록</button>
+      <button id="btn-criteria">평가 기준</button>
+      <button id="btn-settings">AI 설정</button>
+    </div>
+  </div>
+  <div class="sidebar-foot">
+    <span id="ai-state"></span>
+    <span>평가와 서류는 이 기기에 저장됩니다</span>
+  </div>
+</aside>
+<div class="content">
 
 <main>
   <!-- 목록 -->
@@ -122,7 +81,6 @@
         <button class="primary" id="btn-new">+ 새 협력사 평가</button>
       </div>
       <div id="list"></div>
-      <p class="muted small" style="margin-bottom:0">평가와 올린 서류는 이 기기의 브라우저에만 저장됩니다.</p>
     </div>
   </section>
 
@@ -192,6 +150,8 @@
     </div>
   </section>
 </main>
+</div>
+</div>
 
 <div id="toast" hidden></div>
 
@@ -779,7 +739,7 @@ function renderResult() {
   el.innerHTML = `
     <p class="muted small">${esc(ai.at)} · ${esc(ai.model)} · 비용 ${won(ai.usd)} · 서류 ${ai.files.length}개 분석${changed ? ` · 담당자 수정 ${changed}건` : ''}
       ${newFiles ? `<br><span class="warn">분석 후 새로 올린 서류 ${newFiles}개는 결과에 반영되지 않았습니다. 다시 분석하세요.</span>` : ''}</p>
-    <div class="score card" style="background:#fafbfc">
+    <div class="score card inset">
       <div><div class="muted small">역량 평가 점수</div><div class="big">${sc.score ?? '-'}<span style="font-size:18px">점</span></div></div>
       ${g ? `<div class="grade ${GRADE_CLASS[g.grade]}">${g.grade} · ${esc(g.label)}</div>` : ''}
       <div class="bars">${sc.cats.map(x => `<div class="bar"><span>${esc(x.cat.name)}</span>
@@ -853,13 +813,17 @@ $('#btn-settings').onclick = () => {
   $('#model').value = model();
   $('#settings-dlg').showModal();
 };
+function renderAiState() {
+  $('#ai-state').textContent = getSetting(KEY_STORE) ? `AI: ${model() === 'claude-opus-5-5' ? 'Opus 5.5' : 'Sonnet 5.5'} 연결됨` : 'AI: API 키 미설정';
+}
 $('#settings-save').onclick = () => {
   setSetting(KEY_STORE, $('#api-key').value.trim());
   setSetting(MODEL_STORE, $('#model').value);
+  renderAiState();
   $('#settings-dlg').close();
   toast('저장했습니다.');
 };
-$('#key-clear').onclick = () => { $('#api-key').value = ''; setSetting(KEY_STORE, ''); toast('이 기기에서 API 키를 삭제했습니다.'); };
+$('#key-clear').onclick = () => { $('#api-key').value = ''; setSetting(KEY_STORE, ''); renderAiState(); toast('이 기기에서 API 키를 삭제했습니다.'); };
 $('#key-test').onclick = async () => {
   const key = $('#api-key').value.trim();
   if (!key) { toast('API 키를 입력하세요.'); return; }
@@ -886,6 +850,10 @@ try {
   toast('⚠ 이 브라우저에서는 저장 기능을 쓸 수 없습니다 (사생활 보호 모드 등).');
 }
 show('list');
+renderAiState();
+if (location.hash === '#criteria') $('#btn-criteria').click();
+if (location.hash === '#settings') $('#btn-settings').click();
+if (location.hash) history.replaceState(null, '', location.pathname);
 </script>
 </body>
 </html>
