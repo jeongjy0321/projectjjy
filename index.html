@@ -14,11 +14,18 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; font: 14px/1.5 system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: var(--bg); color: var(--text); }
-  header { background: var(--primary); color: var(--primary-ink); padding: 12px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  header h1 { font-size: 18px; margin: 0 12px 0 0; }
-  header .sync { font-size: 12px; opacity: .9; }
+  .topnav { background: #173a6e; display: flex; align-items: stretch; gap: 4px; padding: 0 16px; flex-wrap: wrap; }
+  .topnav .brand { color: #fff; font-weight: 700; font-size: 16px; padding: 12px 12px 12px 0; }
+  .topnav a { color: rgba(255,255,255,.75); text-decoration: none; padding: 12px 18px; font-size: 15px; font-weight: 600; border-bottom: 3px solid transparent; }
+  .topnav a:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .topnav a.active { color: #fff; border-bottom-color: #fff; }
+  .topnav header { flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0 8px 16px; margin-left: 8px; border-left: 1px solid rgba(255,255,255,.2); }
+  header button { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25); }
+  header button:hover { background: rgba(255,255,255,.22); }
+  header button.active { background: #fff; border-color: #fff; color: #173a6e; font-weight: 600; }
+  header .sync { font-size: 12px; color: rgba(255,255,255,.85); }
   header select { width: auto; max-width: 200px; padding: 5px 8px; }
-  header .user { font-size: 12px; opacity: .85; }
+  header .user { font-size: 12px; color: rgba(255,255,255,.85); }
   main { margin: 0 auto; padding: 16px 24px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
   .card h2 { font-size: 16px; margin: 0 0 12px; }
@@ -28,10 +35,6 @@
   button.primary { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
   button.primary:hover { filter: brightness(1.1); }
   button.danger { color: var(--danger); }
-  header button { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.3); }
-  header a.nav-link { color: #fff; text-decoration: none; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 6px 12px; }
-  header a.nav-link:hover { background: rgba(255,255,255,.3); }
-  header button:hover, header button.active { background: rgba(255,255,255,.3); }
   input, select, textarea { font: inherit; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; background: #fff; color: var(--text); }
   input:disabled, select:disabled, textarea:disabled { background: #f7f8fa; color: var(--text); }
   textarea { resize: vertical; min-height: 38px; overflow: hidden; }
@@ -115,7 +118,7 @@
   #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #1d2330; color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 14px; z-index: 10; max-width: calc(100% - 32px); }
 
   @media print {
-    header, .toolbar, .no-print, .edit-only, #toast { display: none !important; }
+    .topnav, header, .toolbar, .no-print, .edit-only, #toast { display: none !important; }
     body { background: #fff; }
     main { max-width: none; padding: 0; }
     .card { border: none; padding: 0; }
@@ -126,12 +129,14 @@
 </style>
 </head>
 <body>
+<nav class="topnav">
+  <span class="brand">🦺 안전보건</span>
+  <a href="index.html" class="active">위험성평가</a>
+  <a href="contractor.html">협력사 서류평가</a>
 <header>
-  <h1>🦺 위험성평가</h1>
   <button data-nav="list">평가 목록</button>
   <button data-nav="library">참조 라이브러리</button>
   <button id="btn-guide">평가 기준</button>
-  <a class="nav-link" href="contractor.html">협력사 서류 평가</a>
   <span class="spacer"></span>
   <span class="sync" id="sync"></span>
   <select id="ws-select" title="사업장 선택" hidden></select>
@@ -139,6 +144,7 @@
   <span class="user" id="user-email" hidden></span>
   <button id="btn-logout" hidden>로그아웃</button>
 </header>
+</nav>
 
 <main>
   <!-- 로그인 화면 (온라인 저장 사용 시) -->

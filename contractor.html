@@ -15,10 +15,15 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; font: 14px/1.5 system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: var(--bg); color: var(--text); }
-  header { background: var(--primary); color: var(--primary-ink); padding: 12px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  header h1 { font-size: 18px; margin: 0 12px 0 0; }
-  header a, header button { font: inherit; color: #fff; text-decoration: none; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
-  header a:hover, header button:hover { background: rgba(255,255,255,.3); }
+  .topnav { background: #173a6e; display: flex; align-items: stretch; gap: 4px; padding: 0 16px; flex-wrap: wrap; }
+  .topnav .brand { color: #fff; font-weight: 700; font-size: 16px; padding: 12px 12px 12px 0; }
+  .topnav a { color: rgba(255,255,255,.75); text-decoration: none; padding: 12px 18px; font-size: 15px; font-weight: 600; border-bottom: 3px solid transparent; }
+  .topnav a:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .topnav a.active { color: #fff; border-bottom-color: #fff; }
+  .topnav header { flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0 8px 16px; margin-left: 8px; border-left: 1px solid rgba(255,255,255,.2); }
+  header button { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25); }
+  header button:hover { background: rgba(255,255,255,.22); }
+  header button.active { background: #fff; border-color: #fff; color: #173a6e; font-weight: 600; }
   main { margin: 0 auto; padding: 16px 24px; max-width: 1600px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
   .card h2 { font-size: 16px; margin: 0 0 12px; }
@@ -85,7 +90,7 @@
   .locked .edit-only { display: none !important; }
 
   @media print {
-    header, .toolbar, .no-print, .edit-only, #toast { display: none !important; }
+    .topnav, header, .toolbar, .no-print, .edit-only, #toast { display: none !important; }
     body { background: #fff; }
     main { padding: 0; max-width: none; }
     .card { border: none; padding: 0; }
@@ -94,14 +99,17 @@
 </style>
 </head>
 <body>
+<nav class="topnav">
+  <span class="brand">🦺 안전보건</span>
+  <a href="index.html">위험성평가</a>
+  <a href="contractor.html" class="active">협력사 서류평가</a>
 <header>
-  <h1>🦺 협력사 서류 평가</h1>
-  <a href="index.html">← 위험성평가</a>
-  <button id="btn-home" hidden>평가 목록</button>
+  <button id="btn-home">평가 목록</button>
   <span class="spacer"></span>
   <button id="btn-criteria">평가 기준</button>
   <button id="btn-settings">AI 설정</button>
 </header>
+</nav>
 
 <main>
   <!-- 목록 -->
@@ -306,7 +314,7 @@ function saveEval() {
 function show(view) {
   $('#view-list').hidden = view !== 'list';
   $('#view-eval').hidden = view !== 'eval';
-  $('#btn-home').hidden = view !== 'eval';
+  $('#btn-home').classList.toggle('active', view === 'list');
   if (view === 'list') renderList();
   window.scrollTo(0, 0);
 }
