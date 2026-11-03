@@ -16,6 +16,9 @@
   body { margin: 0; font: 14px/1.5 system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: var(--bg); color: var(--text); }
   header { background: var(--primary); color: var(--primary-ink); padding: 12px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   header h1 { font-size: 18px; margin: 0 12px 0 0; }
+  header .sync { font-size: 12px; opacity: .9; }
+  header select { width: auto; max-width: 200px; padding: 5px 8px; }
+  header .user { font-size: 12px; opacity: .85; }
   main { margin: 0 auto; padding: 16px 24px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
   .card h2 { font-size: 16px; margin: 0 0 12px; }
@@ -26,6 +29,8 @@
   button.primary:hover { filter: brightness(1.1); }
   button.danger { color: var(--danger); }
   header button { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.3); }
+  header a.nav-link { color: #fff; text-decoration: none; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 6px 12px; }
+  header a.nav-link:hover { background: rgba(255,255,255,.3); }
   header button:hover, header button.active { background: rgba(255,255,255,.3); }
   input, select, textarea { font: inherit; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; background: #fff; color: var(--text); }
   input:disabled, select:disabled, textarea:disabled { background: #f7f8fa; color: var(--text); }
@@ -38,6 +43,10 @@
   .spacer { flex: 1; }
   .muted { color: var(--muted); }
   .warn { color: var(--danger); font-size: 12px; font-weight: 600; }
+  .notice { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #fff8e6; border-color: #f3d58a; }
+  .notice .text { flex: 1; min-width: 220px; }
+  .login { max-width: 460px; margin: 40px auto; text-align: center; padding: 32px 24px; }
+  .login button { font-size: 16px; padding: 10px 20px; }
 
   .list-item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; flex-wrap: wrap; }
   .list-item.old { opacity: .65; }
@@ -100,6 +109,8 @@
   .picker-items input { width: auto; margin-top: 4px; }
   .picker-items .m { color: var(--muted); font-size: 12px; }
   .check-list { margin: 0 0 12px; padding-left: 20px; }
+  .member { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .member span { flex: 1; overflow-wrap: anywhere; }
 
   #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #1d2330; color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 14px; z-index: 10; max-width: calc(100% - 32px); }
 
@@ -120,11 +131,33 @@
   <button data-nav="list">평가 목록</button>
   <button data-nav="library">참조 라이브러리</button>
   <button id="btn-guide">평가 기준</button>
+  <a class="nav-link" href="contractor.html">협력사 서류 평가</a>
+  <span class="spacer"></span>
+  <span class="sync" id="sync"></span>
+  <select id="ws-select" title="사업장 선택" hidden></select>
+  <button id="btn-members" hidden>구성원</button>
+  <span class="user" id="user-email" hidden></span>
+  <button id="btn-logout" hidden>로그아웃</button>
 </header>
 
 <main>
+  <!-- 로그인 화면 (온라인 저장 사용 시) -->
+  <section id="view-login" hidden>
+    <div class="card login">
+      <h2 style="font-size:20px">위험성평가 로그인</h2>
+      <p class="muted">구글 계정으로 로그인하면 컴퓨터·휴대폰 어디서나<br>같은 평가를 보고 관리할 수 있습니다.</p>
+      <button class="primary" id="btn-login">Google 계정으로 로그인</button>
+      <p class="warn" id="login-error" style="margin-top:16px"></p>
+    </div>
+  </section>
+
+  <section id="view-loading" hidden>
+    <div class="card"><p class="muted" id="loading-text">불러오는 중…</p></div>
+  </section>
+
   <!-- 목록 화면 -->
-  <section id="view-list">
+  <section id="view-list" hidden>
+    <div class="card notice" id="notice" hidden></div>
     <div class="card">
       <h2>관리 현황</h2>
       <div class="stats" id="dashboard"></div>
@@ -159,7 +192,6 @@
       <div class="toolbar">
         <h2 style="margin:0">평가 개요</h2>
         <span class="spacer"></span>
-        <span class="muted" id="save-state"></span>
         <button id="btn-csv">엑셀(CSV) 내보내기</button>
         <button id="btn-print">인쇄</button>
         <button class="danger" id="btn-delete">평가 삭제</button>
@@ -280,6 +312,23 @@
   </div>
 </dialog>
 
+<dialog id="members-dlg">
+  <h2>사업장 및 구성원</h2>
+  <label>사업장 이름</label>
+  <input id="ws-name">
+  <p class="muted" style="font-size:13px">아래에 등록된 구글 계정은 이 사업장의 모든 평가와 참조 라이브러리를 함께 보고 수정할 수 있습니다.</p>
+  <div id="member-list"></div>
+  <div class="inline" style="margin-top:12px">
+    <input id="member-email" type="email" placeholder="동료의 구글 계정 이메일">
+    <button class="primary" id="member-add">구성원 추가</button>
+  </div>
+  <div class="dlg-actions">
+    <button id="ws-new">+ 새 사업장 만들기</button>
+    <span class="spacer"></span>
+    <button class="primary" onclick="this.closest('dialog').close()">닫기</button>
+  </div>
+</dialog>
+
 <dialog id="guide">
   <h2>평가 기준 (상중하법, 가능성 5 × 중대성 4)</h2>
   <p class="muted">위험성 = 가능성(빈도) × 중대성(강도)</p>
@@ -307,9 +356,16 @@
   <div class="dlg-actions"><button class="primary" onclick="this.closest('dialog').close()">닫기</button></div>
 </dialog>
 
+<script src="firebase-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 const STORE_KEY = 'risk-assessments-v1';
 const LIB_KEY = 'risk-library-v1';
+const WS_KEY = 'risk-workspace';
+const MIGRATED_KEY = 'risk-local-migrated';
+const CLOUD = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey);
 const CATEGORIES = ['기계적 요인', '전기적 요인', '화학(물질)적 요인', '생물학적 요인', '작업특성 요인', '작업환경 요인', '기타'];
 const LIKELIHOOD = { 5: '최상', 4: '상', 3: '중', 2: '하', 1: '최하' };
 const SEVERITY = { 4: '최대', 3: '대', 2: '중', 1: '소' };
@@ -390,7 +446,7 @@ function riskLevel(score) {
 }
 const score = (l, s) => (l && s ? Number(l) * Number(s) : 0);
 
-// ---------- 저장소 ----------
+// ---------- 공통 유틸 ----------
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 // 날짜는 모두 현지 시간 기준 YYYY-MM-DD
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -402,6 +458,9 @@ function addYear(date) { const d = toDate(date); d.setFullYear(d.getFullYear() +
 function loadJSON(key) {
   try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
 }
+function saveSetting(key, value) {
+  try { localStorage.setItem(key, value); } catch { /* 저장소 사용 불가 시 무시 */ }
+}
 function seedLibrary(names = Object.keys(DEFAULT_LIBRARY)) {
   return names.map(name => ({
     id: uid(), name,
@@ -409,31 +468,28 @@ function seedLibrary(names = Object.keys(DEFAULT_LIBRARY)) {
       ({ id: uid(), task, category: CAT[cat], hazard, current, l: String(l), s: String(s), measure, l2: String(l2), s2: String(s2) })),
   }));
 }
+const normalizeAssessment = a => ({ status: 'draft', version: 1, ...a });
+const clone = v => JSON.parse(JSON.stringify(v));
+// 키 순서와 무관하게 내용이 같은지 비교
+function stableStr(v) {
+  if (Array.isArray(v)) return '[' + v.map(stableStr).join(',') + ']';
+  if (v && typeof v === 'object') return '{' + Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => JSON.stringify(k) + ':' + stableStr(v[k])).join(',') + '}';
+  return JSON.stringify(v);
+}
 
-let db = (loadJSON(STORE_KEY) || []).map(a => ({ status: 'draft', version: 1, ...a }));
-let library = loadJSON(LIB_KEY) || seedLibrary();
+let db = CLOUD ? [] : (loadJSON(STORE_KEY) || []).map(normalizeAssessment);
+let library = CLOUD ? [] : loadJSON(LIB_KEY) || seedLibrary();
 let current = null;
 let currentLibId = null;
-
-function persist() {
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(db));
-    localStorage.setItem(LIB_KEY, JSON.stringify(library));
-    setSaveState('저장됨 ' + new Date().toLocaleTimeString('ko-KR'));
-  } catch {
-    setSaveState('⚠ 저장 실패 (브라우저 저장소 사용 불가)');
-  }
-}
-function setSaveState(text) { document.getElementById('save-state').textContent = text; }
-function touch() { current.updatedAt = Date.now(); persist(); }
 
 let toastTimer;
 function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; }, 2800);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 3200);
 }
+function setSync(text) { document.getElementById('sync').textContent = text; }
 
 // 삭제 등 되돌리기 어려운 동작은 두 번 눌러야 실행
 function confirmTwice(btn, fn) {
@@ -444,29 +500,340 @@ function confirmTwice(btn, fn) {
   setTimeout(() => { if (btn.dataset.armed) { delete btn.dataset.armed; btn.textContent = btn.dataset.label; } }, 3000);
 }
 
-function newRow(src = {}) {
-  const r = { id: uid(), task: '', category: CATEGORIES[0], hazard: '', current: '', l: '', s: '', measure: '', l2: '', s2: '', due: '', done: '', owner: '' };
-  ROW_FIELDS.forEach(f => { if (src[f] != null) r[f] = src[f]; });
-  return r;
+// ---------- 저장 (온라인: Firebase Firestore / 설정 전: 이 기기 브라우저) ----------
+let fs = null, auth = null, user = null, ws = null, wsRef = null, wsList = [];
+let unsubs = [];
+const dirty = new Set();   // 아직 서버 반영이 끝나지 않은 문서. 이 문서들은 서버 스냅샷으로 덮어쓰지 않는다.
+const timers = {};         // 입력 중 연속 저장을 묶기 위한 문서별 지연 저장
+const sent = {};           // 문서별로 내가 보낸 내용. 서버에서 되돌아온 내 저장을 다른 사람의 변경과 구분
+let inflight = 0;
+
+function saveAssessment(a) { queueWrite('assessments', a); }
+function saveLib(p) { queueWrite('library', p); }
+function removeAssessment(id) { removeDoc('assessments', id); }
+function removeLib(id) { removeDoc('library', id); }
+
+function saveLocal() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(db));
+    localStorage.setItem(LIB_KEY, JSON.stringify(library));
+    setSync('이 기기에 저장됨 ' + new Date().toLocaleTimeString('ko-KR'));
+  } catch {
+    setSync('⚠ 저장 실패 (브라우저 저장소 사용 불가)');
+  }
 }
-function newAssessment() {
-  return { id: uid(), site: '', process: '', type: '최초평가', date: today(), assessor: '', approver: '', rows: [newRow()],
-    status: 'draft', version: 1, updatedAt: Date.now() };
+
+function queueWrite(col, obj) {
+  if (!CLOUD) { saveLocal(); return; }
+  const key = col + '/' + obj.id;
+  dirty.add(key);
+  clearTimeout(timers[key]?.t);
+  timers[key] = { t: setTimeout(() => flushWrite(key), 700), ref: wsRef.collection(col).doc(obj.id), obj };
+  updateSync();
 }
-const isBlank = r => !r.task && !r.hazard && !r.current && !r.measure;
-const isPending = r => r.measure && r.measure.trim() && !r.done;
-const isOverdue = r => isPending(r) && r.due && r.due < today();
-const isLocked = a => a.status === 'done';
+function flushWrite(key) {
+  const job = timers[key];
+  if (!job) return;
+  clearTimeout(job.t);
+  delete timers[key];
+  inflight++; updateSync();
+  // JSON 왕복으로 undefined 필드를 없애고 지금 시점의 내용을 고정
+  const payload = clone(job.obj);
+  (sent[key] = sent[key] || []).push(stableStr(payload));
+  job.ref.set(payload)
+    .catch(err => { console.error(err); toast('⚠ 온라인 저장 실패: ' + (err.code || err.message)); })
+    .finally(() => { inflight--; if (!timers[key]) dirty.delete(key); updateSync(); });
+}
+function flushAll() { Object.keys(timers).forEach(flushWrite); }
+function removeDoc(col, id) {
+  if (!CLOUD) { saveLocal(); return; }
+  const key = col + '/' + id;
+  clearTimeout(timers[key]?.t);
+  delete timers[key];
+  dirty.delete(key);
+  wsRef.collection(col).doc(id).delete().catch(err => toast('⚠ 삭제 실패: ' + (err.code || err.message)));
+}
+function updateSync() {
+  if (!CLOUD || !user) return;
+  const pending = Object.keys(timers).length + inflight;
+  setSync(!navigator.onLine ? '⚠ 오프라인 · 연결되면 자동 업로드' : pending ? '저장 중…' : '☁ 온라인 저장됨');
+}
+window.addEventListener('online', updateSync);
+window.addEventListener('offline', updateSync);
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushAll(); });
+window.addEventListener('pagehide', flushAll);
+
+// 다른 기기·사용자의 변경을 반영
+const base = {};  // 문서별 마지막으로 받은 서버 내용. 내 변경분(base→로컬)을 계산하는 기준
+
+function applySnapshot(col, snap) {
+  const arr = col === 'assessments' ? db : library;
+  let changed = false;
+  snap.docChanges().forEach(ch => {
+    if (ch.doc.metadata.hasPendingWrites) return;  // 내가 보낸 쓰기의 로컬 반영
+    const id = ch.doc.id, key = col + '/' + id;
+    const i = arr.findIndex(x => x.id === id);
+    if (ch.type === 'removed') {
+      delete base[key];
+      clearTimeout(timers[key]?.t); delete timers[key]; dirty.delete(key);
+      if (i >= 0) { arr.splice(i, 1); changed = true; }
+      return;
+    }
+    const data = { ...ch.doc.data(), id };
+    const remote = col === 'assessments' ? normalizeAssessment(data) : data;
+    const local = arr[i];
+    const echo = (sent[key] || []).indexOf(stableStr(remote));
+    if (echo >= 0) {
+      // 내가 보낸 저장이 서버에 반영된 것. 그 사이 더 고친 내용이 있으면 이어서 저장
+      sent[key].splice(0, echo + 1);
+      base[key] = clone(remote);
+      if (i >= 0 && stableStr(local) !== stableStr(remote) && !timers[key]) queueWrite(col, local);
+      return;
+    }
+    if (i >= 0 && dirty.has(key)) {
+      // 저장 전인 내 변경이 있으면 덮어쓰지 않고 서버 내용 위에 내 변경분만 합친다
+      const merged = merge3(base[key], local, remote);
+      base[key] = clone(remote);
+      if (stableStr(merged) !== stableStr(local)) { replaceInPlace(local, merged); changed = true; }
+      if (stableStr(merged) !== stableStr(remote)) queueWrite(col, local);
+      return;
+    }
+    base[key] = clone(remote);
+    if (i >= 0 && stableStr(local) === stableStr(remote)) return;
+    if (i >= 0) replaceInPlace(local, remote); else arr.push(remote);
+    changed = true;
+  });
+  if (changed) scheduleRefresh();
+}
+
+function replaceInPlace(target, src) {
+  Object.keys(target).forEach(k => { if (!(k in src)) delete target[k]; });
+  Object.assign(target, clone(src));
+}
+
+// 3-way 병합: base→local 사이에 내가 바꾼 칸(필드·행 단위)만 remote 위에 덮어쓴다
+function merge3(b, local, remote) {
+  if (!b) return clone(local);
+  const out = clone(remote);
+  new Set([...Object.keys(b), ...Object.keys(local)]).forEach(k => {
+    if (k === 'rows' || k === 'items' || stableStr(b[k]) === stableStr(local[k])) return;
+    if (local[k] === undefined) delete out[k]; else out[k] = clone(local[k]);
+  });
+  ['rows', 'items'].forEach(k => { if (local[k]) out[k] = mergeList(b[k] || [], local[k], remote[k] || []); });
+  return out;
+}
+function mergeList(b, local, remote) {
+  const B = new Map(b.map(x => [x.id, x])), L = new Map(local.map(x => [x.id, x])), R = new Set(remote.map(x => x.id));
+  const out = [];
+  remote.forEach(r => {
+    const br = B.get(r.id), lr = L.get(r.id);
+    if (!lr) { if (!br) out.push(clone(r)); return; }  // 로컬에서 지운 행은 제외, 원격에서 새로 생긴 행은 유지
+    const row = clone(r);
+    if (br) Object.keys({ ...br, ...lr }).forEach(f => { if (br[f] !== lr[f]) row[f] = lr[f]; });
+    else Object.assign(row, lr);
+    out.push(row);
+  });
+  local.forEach(lr => { if (!R.has(lr.id) && !B.has(lr.id)) out.push(clone(lr)); });  // 로컬에서 새로 추가한 행
+  return out;
+}
+
+// 입력 중에는 화면을 다시 그리지 않고, 입력칸을 벗어난 뒤 반영
+let refreshPending = false;
+const isEditing = () => {
+  const el = document.activeElement;
+  return el && el.matches('input, textarea, select') && el.closest('#view-edit, #view-library');
+};
+function scheduleRefresh() {
+  if (isEditing()) { refreshPending = true; return; }
+  refreshView();
+}
+document.addEventListener('focusout', () => {
+  if (!refreshPending) return;
+  setTimeout(() => { if (refreshPending && !isEditing()) { refreshPending = false; refreshView(); } }, 0);
+});
+function refreshView() {
+  refreshLibNames();
+  const visible = v => !document.getElementById('view-' + v).hidden;
+  if (visible('list')) renderList();
+  else if (visible('edit') && current) {
+    const fresh = db.find(a => a.id === current.id);
+    if (!fresh) { toast('이 평가가 다른 곳에서 삭제되었습니다.'); show('list'); return; }
+    current = fresh;
+    renderEdit();
+  } else if (visible('library')) renderLibrary();
+}
+
+// ---------- 로그인·사업장 ----------
+async function initCloud() {
+  if (typeof firebase === 'undefined') {
+    showLogin('Firebase를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로 고침하세요.');
+    return;
+  }
+  firebase.initializeApp(window.FIREBASE_CONFIG);
+  auth = firebase.auth();
+  fs = firebase.firestore();
+  try { await fs.enablePersistence({ synchronizeTabs: true }); } catch { /* 지원하지 않는 브라우저는 온라인 전용 */ }
+  show('loading');
+  let authUid;  // 같은 사용자에 대한 중복 알림으로 사업장이 두 번 만들어지지 않게 함
+  auth.onAuthStateChanged(u => {
+    if (u && u.uid === authUid) return;
+    authUid = u ? u.uid : null;
+    user = u;
+    renderHeader();
+    if (u) loadWorkspaces().catch(err => showLogin(explainError(err)));
+    else showLogin();
+  });
+}
+
+function explainError(err) {
+  const code = err && err.code;
+  if (code === 'auth/unauthorized-domain')
+    return `이 주소(${location.hostname})가 Firebase 승인된 도메인에 없습니다. SETUP.md 3단계를 확인하세요.`;
+  if (code === 'permission-denied')
+    return 'Firestore 접근이 거부되었습니다. SETUP.md 5단계의 보안 규칙이 게시되었는지 확인하세요.';
+  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return '';
+  return '오류: ' + (code || (err && err.message) || err);
+}
+
+function showLogin(error = '') {
+  document.getElementById('login-error').textContent = error;
+  show('login');
+}
+
+document.getElementById('btn-login').onclick = () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    if (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment')
+      return auth.signInWithRedirect(provider);
+    document.getElementById('login-error').textContent = explainError(err);
+  });
+};
+document.getElementById('btn-logout').onclick = () => {
+  flushAll();
+  unsubs.forEach(f => f()); unsubs = [];
+  db = []; library = []; current = null; ws = null; wsList = [];
+  auth.signOut();
+};
+
+const myEmail = () => user.email.toLowerCase();
+
+async function loadWorkspaces(preferId) {
+  document.getElementById('loading-text').textContent = '사업장 정보를 불러오는 중…';
+  show('loading');
+  const snap = await fs.collection('workspaces').where('members', 'array-contains', myEmail()).get();
+  wsList = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+  if (!wsList.length) wsList.push(await createWorkspace('내 사업장'));
+  const saved = preferId || loadJSON(WS_KEY);
+  selectWorkspace((wsList.find(w => w.id === saved) || wsList[0]).id);
+}
+
+async function createWorkspace(name) {
+  const ref = fs.collection('workspaces').doc();
+  const data = { name, owner: user.uid, ownerEmail: myEmail(), members: [myEmail()], createdAt: Date.now() };
+  await ref.set(data);
+  const batch = fs.batch();
+  seedLibrary().forEach(p => batch.set(ref.collection('library').doc(p.id), p));
+  await batch.commit();
+  return { ...data, id: ref.id };
+}
+
+function selectWorkspace(id) {
+  flushAll();
+  unsubs.forEach(f => f()); unsubs = [];
+  ws = wsList.find(w => w.id === id);
+  wsRef = fs.collection('workspaces').doc(id);
+  saveSetting(WS_KEY, JSON.stringify(id));
+  db = []; library = []; current = null; currentLibId = null;
+  renderHeader();
+  document.getElementById('loading-text').textContent = `'${ws.name}' 데이터를 불러오는 중…`;
+  show('loading');
+  let ready = 0;
+  ['assessments', 'library'].forEach(col => {
+    let first = true;
+    unsubs.push(wsRef.collection(col).onSnapshot(snap => {
+      applySnapshot(col, snap);
+      if (first) { first = false; if (++ready === 2) { show('list'); updateSync(); } }
+    }, err => toast('⚠ 불러오기 실패: ' + explainError(err))));
+  });
+  unsubs.push(wsRef.onSnapshot(d => {
+    if (!d.exists) return;
+    Object.assign(ws, d.data());
+    renderHeader();
+    if (document.getElementById('members-dlg').open) renderMembers();
+  }, () => {
+    // 구성원에서 제외되면 접근이 막힘 → 사업장 목록을 다시 불러옴
+    toast('이 사업장에 더 이상 접근할 수 없습니다.');
+    loadWorkspaces().catch(err => showLogin(explainError(err)));
+  }));
+}
+
+function renderHeader() {
+  const on = CLOUD && !!user;
+  ['ws-select', 'btn-members', 'user-email', 'btn-logout'].forEach(id => { document.getElementById(id).hidden = !on; });
+  if (!CLOUD) setSync('이 기기에만 저장');
+  if (!on) return;
+  document.getElementById('user-email').textContent = user.email;
+  document.getElementById('ws-select').innerHTML = wsList.map(w =>
+    `<option value="${w.id}" ${ws && w.id === ws.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('');
+}
+document.getElementById('ws-select').onchange = e => selectWorkspace(e.target.value);
+
+function renderMembers() {
+  document.getElementById('ws-name').value = ws.name;
+  document.getElementById('member-list').innerHTML = ws.members.map(m => `<div class="member">
+      <span>${esc(m)}${m === ws.ownerEmail ? ' <span class="badge st-done">소유자</span>' : ''}${m === myEmail() ? ' <span class="muted">(나)</span>' : ''}</span>
+      ${m === ws.ownerEmail ? '' : `<button class="danger" data-remove="${esc(m)}">제외</button>`}
+    </div>`).join('');
+}
+document.getElementById('btn-members').onclick = () => {
+  renderMembers();
+  document.getElementById('members-dlg').showModal();
+};
+document.getElementById('ws-name').onchange = e => {
+  const name = e.target.value.trim();
+  if (!name) return;
+  ws.name = name;
+  wsRef.update({ name }).catch(err => toast(explainError(err)));
+  renderHeader();
+};
+document.getElementById('member-add').onclick = () => {
+  const input = document.getElementById('member-email');
+  const email = input.value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('이메일 형식을 확인하세요.'); return; }
+  wsRef.update({ members: firebase.firestore.FieldValue.arrayUnion(email) })
+    .then(() => { input.value = ''; toast(`${email} 님을 구성원으로 추가했습니다. 이 계정으로 로그인하면 함께 볼 수 있습니다.`); })
+    .catch(err => toast(explainError(err)));
+};
+document.getElementById('member-list').onclick = e => {
+  const email = e.target.dataset.remove;
+  if (!email) return;
+  confirmTwice(e.target, () => {
+    wsRef.update({ members: firebase.firestore.FieldValue.arrayRemove(email) }).catch(err => toast(explainError(err)));
+  });
+};
+document.getElementById('ws-new').onclick = async () => {
+  try {
+    const created = await createWorkspace('새 사업장');
+    document.getElementById('members-dlg').close();
+    wsList.push(created);
+    selectWorkspace(created.id);
+    toast("새 사업장을 만들었습니다. '구성원'에서 이름을 바꿀 수 있습니다.");
+  } catch (err) { toast(explainError(err)); }
+};
 
 // ---------- 화면 전환 ----------
+const VIEWS = ['login', 'loading', 'list', 'edit', 'library'];
 function show(view) {
-  ['list', 'edit', 'library'].forEach(v => { document.getElementById('view-' + v).hidden = v !== view; });
+  VIEWS.forEach(v => { document.getElementById('view-' + v).hidden = v !== view; });
+  const inApp = view !== 'login' && view !== 'loading';
+  document.querySelectorAll('[data-nav], #btn-guide').forEach(b => { b.hidden = !inApp; });
   document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === view));
   if (view === 'list') renderList();
   if (view === 'library') renderLibrary();
   window.scrollTo(0, 0);
   autosizeIn(document.getElementById('view-' + view));
 }
+document.querySelectorAll('[data-nav]').forEach(b => { b.onclick = () => show(b.dataset.nav); });
 
 // 입력칸 높이를 내용에 맞춰 늘려 글자가 잘리지 않게 함 (화면에 보일 때만 높이 계산 가능)
 function autosize(el) {
@@ -481,7 +848,6 @@ window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => autosizeIn(document.querySelector('main')), 150);
 });
-document.querySelectorAll('[data-nav]').forEach(b => { b.onclick = () => show(b.dataset.nav); });
 
 // ---------- 목록 ----------
 function rowCounts(a) {
@@ -494,6 +860,35 @@ function rowCounts(a) {
   });
   return c;
 }
+
+function renderNotice() {
+  const el = document.getElementById('notice');
+  const local = CLOUD ? (loadJSON(STORE_KEY) || []) : [];
+  if (!CLOUD) {
+    el.innerHTML = '<div class="text">⚠ 온라인 저장이 설정되지 않아 <b>이 기기의 브라우저에만</b> 저장됩니다. 다른 기기에서 보려면 전체 백업 파일을 옮기세요.</div>';
+    el.hidden = false;
+  } else if (local.length && !loadJSON(MIGRATED_KEY)) {
+    el.innerHTML = `<div class="text">이 기기에 온라인 저장 전에 작성한 평가 <b>${local.length}건</b>이 있습니다. 온라인으로 올리면 다른 기기에서도 볼 수 있습니다.</div>
+      <button id="migrate-skip">숨기기</button>
+      <button class="primary" id="migrate-go">'${esc(ws.name)}'(으)로 올리기</button>`;
+    el.hidden = false;
+  } else {
+    el.hidden = true;
+  }
+}
+document.getElementById('notice').onclick = e => {
+  if (e.target.id === 'migrate-skip') { saveSetting(MIGRATED_KEY, 'true'); renderNotice(); }
+  if (e.target.id !== 'migrate-go') return;
+  const ids = new Set(db.map(a => a.id));
+  const localDb = (loadJSON(STORE_KEY) || []).filter(a => a && a.id && Array.isArray(a.rows) && !ids.has(a.id));
+  localDb.forEach(a => { const n = normalizeAssessment(a); db.push(n); saveAssessment(n); });
+  const names = new Set(library.map(p => p.name));
+  const localLib = (loadJSON(LIB_KEY) || []).filter(p => p && p.name && Array.isArray(p.items) && !names.has(p.name));
+  localLib.forEach(p => { library.push(p); saveLib(p); });
+  saveSetting(MIGRATED_KEY, 'true');
+  renderList();
+  toast(`평가 ${localDb.length}건, 참조 공정 ${localLib.length}개를 온라인으로 올렸습니다.`);
+};
 
 function renderDashboard() {
   const live = db.filter(a => !a.supersededBy);
@@ -515,6 +910,7 @@ function renderDashboard() {
 }
 
 function renderList() {
+  renderNotice();
   renderDashboard();
   const filter = document.getElementById('list-filter').value;
   const q = document.getElementById('list-search').value.trim().toLowerCase();
@@ -564,21 +960,38 @@ document.getElementById('list').onclick = e => {
     const copy = { ...structuredClone(src), id: uid(), date: today(), updatedAt: Date.now(), process: src.process + ' (복사본)',
       status: 'draft', version: 1, prevId: undefined, supersededBy: undefined, completedAt: undefined, nextReview: undefined };
     copy.rows.forEach(r => { r.id = uid(); r.done = ''; });
-    db.push(copy); persist(); renderList();
+    db.push(copy); saveAssessment(copy); renderList();
   } else if (openId) open(openId);
 };
 
-document.getElementById('btn-new').onclick = () => { const a = newAssessment(); db.push(a); persist(); open(a.id); };
+document.getElementById('btn-new').onclick = () => { const a = newAssessment(); db.push(a); saveAssessment(a); open(a.id); };
 
 // ---------- 평가 편집 ----------
+function newRow(src = {}) {
+  const r = { id: uid(), task: '', category: CATEGORIES[0], hazard: '', current: '', l: '', s: '', measure: '', l2: '', s2: '', due: '', done: '', owner: '' };
+  ROW_FIELDS.forEach(f => { if (src[f] != null) r[f] = src[f]; });
+  return r;
+}
+function newAssessment() {
+  return { id: uid(), site: '', process: '', type: '최초평가', date: today(), assessor: '', approver: '', rows: [newRow()],
+    status: 'draft', version: 1, updatedAt: Date.now() };
+}
+const isBlank = r => !r.task && !r.hazard && !r.current && !r.measure;
+const isPending = r => r.measure && r.measure.trim() && !r.done;
+const isOverdue = r => isPending(r) && r.due && r.due < today();
+const isLocked = a => a.status === 'done';
+function touch() { current.updatedAt = Date.now(); saveAssessment(current); }
+
 function open(id) {
   current = db.find(a => a.id === id);
   if (!current) return;
-  document.querySelectorAll('[data-h]').forEach(el => { el.value = current[el.dataset.h] ?? ''; });
   refreshLibNames();
-  setSaveState('');
-  renderRows();
+  renderEdit();
   show('edit');
+}
+function renderEdit() {
+  document.querySelectorAll('[data-h]').forEach(el => { el.value = current[el.dataset.h] ?? ''; });
+  renderRows();
 }
 
 function applyLock() {
@@ -665,7 +1078,8 @@ function reassess() {
   });
   prev.supersededBy = next.id;
   db.push(next);
-  persist();
+  saveAssessment(prev);
+  saveAssessment(next);
   open(next.id);
   toast(`재평가 v${next.version}을 만들었습니다. 이행 완료된 대책은 현재 조치로 반영했습니다.`);
 }
@@ -790,12 +1204,16 @@ document.getElementById('btn-add-row').onclick = () => { current.rows.push(newRo
 document.getElementById('btn-print').onclick = () => window.print();
 document.getElementById('btn-csv').onclick = exportCSV;
 document.getElementById('btn-delete').onclick = e => confirmTwice(e.target, () => {
+  const id = current.id;
   db.forEach(a => {
-    if (a.supersededBy === current.id) a.supersededBy = undefined;
-    if (a.prevId === current.id) a.prevId = undefined;
+    let changed = false;
+    if (a.supersededBy === id) { a.supersededBy = undefined; changed = true; }
+    if (a.prevId === id) { a.prevId = undefined; changed = true; }
+    if (changed) saveAssessment(a);
   });
-  db = db.filter(a => a.id !== current.id);
-  persist(); show('list');
+  db = db.filter(a => a.id !== id);
+  removeAssessment(id);
+  show('list');
 });
 
 // ---------- 참조 불러오기 ----------
@@ -859,7 +1277,7 @@ document.getElementById('btn-save-ref').onclick = () => {
     const it = { id: uid() }; ROW_FIELDS.forEach(f => { it[f] = r[f]; }); return it;
   });
   lib.items.push(...added);
-  persist(); refreshLibNames();
+  saveLib(lib); refreshLibNames();
   toast(added.length ? `'${name}' 참조에 ${added.length}건을 저장했습니다.` : '새로 저장할 위험요인이 없습니다 (이미 모두 참조에 있음).');
 };
 
@@ -905,7 +1323,7 @@ document.getElementById('lib-procs').onclick = e => {
 };
 document.getElementById('lib-add-proc').onclick = () => {
   const p = { id: uid(), name: '새 공정', items: [newLibItem()] };
-  library.push(p); currentLibId = p.id; persist(); renderLibrary();
+  library.push(p); currentLibId = p.id; saveLib(p); renderLibrary();
   document.getElementById('lib-name').select();
 };
 function newLibItem() {
@@ -913,10 +1331,10 @@ function newLibItem() {
 }
 document.getElementById('lib-restore').onclick = () => {
   const have = new Set(library.map(p => p.name));
-  const missing = Object.keys(DEFAULT_LIBRARY).filter(n => !have.has(n));
-  library.push(...seedLibrary(missing));
-  persist(); renderLibrary();
-  toast(missing.length ? `기본 예시 공정 ${missing.length}개를 복원했습니다.` : '기본 예시 공정이 이미 모두 있습니다.');
+  const restored = seedLibrary(Object.keys(DEFAULT_LIBRARY).filter(n => !have.has(n)));
+  restored.forEach(p => { library.push(p); saveLib(p); });
+  renderLibrary();
+  toast(restored.length ? `기본 예시 공정 ${restored.length}개를 복원했습니다.` : '기본 예시 공정이 이미 모두 있습니다.');
 };
 
 const libDetail = document.getElementById('lib-detail');
@@ -925,7 +1343,7 @@ libDetail.addEventListener('input', e => {
   if (e.target.id === 'lib-name') {
     lib.name = e.target.value;
     document.querySelector(`[data-lib="${lib.id}"]`).firstChild.textContent = lib.name || '(이름 없음)';
-    persist(); return;
+    saveLib(lib); return;
   }
   const f = e.target.dataset.f;
   if (!f) return;
@@ -933,16 +1351,16 @@ libDetail.addEventListener('input', e => {
   const it = lib.items.find(x => x.id === tr.dataset.id);
   it[f] = e.target.value;
   if (['l', 's', 'l2', 's2'].includes(f)) updateRowOutputs(tr, it);
-  persist();
+  saveLib(lib);
 });
 libDetail.addEventListener('click', e => {
   const lib = library.find(p => p.id === currentLibId);
-  if (e.target.id === 'lib-add-item') { lib.items.push(newLibItem()); persist(); renderLibrary(); }
+  if (e.target.id === 'lib-add-item') { lib.items.push(newLibItem()); saveLib(lib); renderLibrary(); }
   else if (e.target.id === 'lib-del') confirmTwice(e.target, () => {
-    library = library.filter(p => p.id !== lib.id); persist(); renderLibrary();
+    library = library.filter(p => p.id !== lib.id); removeLib(lib.id); renderLibrary();
   });
   else if (e.target.dataset.del) {
-    lib.items = lib.items.filter(it => it.id !== e.target.dataset.del); persist(); renderLibrary();
+    lib.items = lib.items.filter(it => it.id !== e.target.dataset.del); saveLib(lib); renderLibrary();
   }
 });
 
@@ -984,13 +1402,13 @@ document.getElementById('file-import').onchange = async e => {
     const ids = new Set(db.map(a => a.id));
     let na = 0, nl = 0;
     assessments.forEach(a => {
-      if (a && a.id && Array.isArray(a.rows) && !ids.has(a.id)) { db.push({ status: 'draft', version: 1, ...a }); na++; }
+      if (a && a.id && Array.isArray(a.rows) && !ids.has(a.id)) { const n = normalizeAssessment(a); db.push(n); saveAssessment(n); na++; }
     });
     const names = new Set(library.map(p => p.name));
     (Array.isArray(data.library) ? data.library : []).forEach(p => {
-      if (p && p.name && Array.isArray(p.items) && !names.has(p.name)) { library.push(p); nl++; }
+      if (p && p.name && Array.isArray(p.items) && !names.has(p.name)) { library.push(p); saveLib(p); nl++; }
     });
-    persist(); renderList();
+    renderList();
     toast(`평가 ${na}건, 참조 공정 ${nl}개를 불러왔습니다.`);
   } catch {
     toast('백업 파일 형식이 올바르지 않습니다.');
@@ -1002,8 +1420,14 @@ function esc(s) {
 }
 
 document.getElementById('btn-guide').onclick = () => document.getElementById('guide').showModal();
-if (!loadJSON(LIB_KEY)) persist();
-show('list');
+
+if (CLOUD) {
+  initCloud();
+} else {
+  if (!loadJSON(LIB_KEY)) saveLocal();
+  renderHeader();
+  show('list');
+}
 </script>
 </body>
 </html>

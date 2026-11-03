@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// 사업장(workspaces) 문서의 members 배열에 이메일이 등록된 구글 계정만
+// 그 사업장의 평가(assessments)와 참조 라이브러리(library)를 읽고 쓸 수 있다.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function myEmail() {
+      return request.auth.token.email;
+    }
+    function isMember(wsId) {
+      return signedIn()
+        && myEmail() in get(/databases/$(database)/documents/workspaces/$(wsId)).data.members;
+    }
+
+    match /workspaces/{wsId} {
+      allow read: if signedIn() && myEmail() in resource.data.members;
+      allow create: if signedIn()
+        && request.resource.data.owner == request.auth.uid
+        && myEmail() in request.resource.data.members;
+      // 구성원은 이름·구성원 목록을 바꿀 수 있지만 소유자와 소유자 이메일은 바꿀 수 없다
+      allow update: if signedIn()
+        && myEmail() in resource.data.members
+        && request.resource.data.owner == resource.data.owner
+        && resource.data.ownerEmail in request.resource.data.members;
+      allow delete: if signedIn() && resource.data.owner == request.auth.uid;
+
+      match /{col}/{docId} {
+        allow read, write: if (col == 'assessments' || col == 'library') && isMember(wsId);
+      }
+    }
+  }
+}
